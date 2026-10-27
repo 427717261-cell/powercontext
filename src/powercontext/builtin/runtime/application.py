@@ -144,6 +144,7 @@ from powercontext.builtin.persistence.artifact_governance import (
     ArtifactLifecycleState,
 )
 from powercontext.builtin.persistence.skill_publications import SkillPublication
+from powercontext.builtin.persistence.source_lifecycle import SourceLifecycleRepository
 from powercontext.builtin.publication import ArtifactPublicationApplication
 from powercontext.builtin.records import (
     ArtifactCreated,
@@ -249,6 +250,7 @@ from powercontext.builtin.runtime.recall_sufficiency import (
     recall_effort,
 )
 from powercontext.builtin.runtime.statistics import RelationalScopedStatistics, overview_selection
+from powercontext.builtin.runtime.source_lifecycle import SourceLifecycleApplication
 from powercontext.builtin.scope import ScopeApplication, ScopeDescriptor, ScopeSelection
 from powercontext.builtin.scope.subject_sources import SubjectSourceService
 from powercontext.builtin.sources import (
@@ -2683,6 +2685,7 @@ class ScopedTopicMemoryApplication:
                         "unit": "topic-memory",
                     },
                 )
+        result = await self._runtime._mask_unavailable_topic_memory(self.scope_id, result)
         return result
 
     async def _search_with_embedding(
@@ -3013,6 +3016,7 @@ class BuiltinRuntime:
         remote_skill_distribution: RemoteSkillDistributionService | None = None,
         statistics_service: StatisticsServiceFactory | None = None,
         record_service: RecordService | None = None,
+        lifecycle_repository: SourceLifecycleRepository | None = None,
         prompt_service: PromptService | None = None,
         recall_token_estimator: RecallTokenEstimator | None = None,
         recall_effort_sink: RecallEffortSink | None = None,
@@ -3069,6 +3073,7 @@ class BuiltinRuntime:
         self._remote_skill_distribution = remote_skill_distribution
         self._statistics_service = statistics_service
         self._record_service = record_service
+        self.lifecycle_repository = lifecycle_repository
         self._prompt_service = prompt_service
         self._recall_token_estimator = recall_token_estimator
         self._recall_effort_sink = recall_effort_sink
@@ -3092,7 +3097,7 @@ class BuiltinRuntime:
         )
         self._processor_lock = asyncio.Lock()
         self._close_lock = asyncio.Lock()
-        self._lifecycle = asyncio.Condition()
+        self._lifecycle_condition = asyncio.Condition()
         self._active_operations = 0
         self._operation_depths: dict[asyncio.Task[Any], int] = {}
         self._closing = False
@@ -3109,6 +3114,7 @@ class BuiltinRuntime:
         self.handoff = HandoffApplication(self)
         self.work = WorkApplication(self)
         self.memory = MemoryApplication(self)
+        self.lifecycle = SourceLifecycleApplication(self)
         self.topic_memory = TopicMemoryApplication(self)
         self.records = RecordApplication(self)
         self.prompts = PromptApplication(self)
@@ -3265,9 +3271,9 @@ class BuiltinRuntime:
                 return
             if self._scheduler is not None and self._scheduler.running:
                 self._scheduler.pause()
-            async with self._lifecycle:
+            async with self._lifecycle_condition:
                 self._closing = True
-                await self._lifecycle.wait_for(lambda: self._active_operations == 0)
+                await self._lifecycle_condition.wait_for(lambda: self._active_operations == 0)
             if self.artifact_processing_supervisor is not None:
                 await self.artifact_processing_supervisor.close()
             async with self._processor_lock:
@@ -3291,7 +3297,7 @@ class BuiltinRuntime:
         task = asyncio.current_task()
         if task is None:
             raise RuntimeError("Runtime operations require an asyncio Task")  # noqa: TRY003
-        async with self._lifecycle:
+        async with self._lifecycle_condition:
             depth = self._operation_depths.get(task, 0)
             if depth == 0:
                 if self._closing or self._closed:
@@ -3301,7 +3307,7 @@ class BuiltinRuntime:
         try:
             yield
         finally:
-            async with self._lifecycle:
+            async with self._lifecycle_condition:
                 depth = self._operation_depths[task] - 1
                 if depth > 0:
                     self._operation_depths[task] = depth
@@ -3309,7 +3315,7 @@ class BuiltinRuntime:
                     del self._operation_depths[task]
                     self._active_operations -= 1
                     if self._active_operations == 0:
-                        self._lifecycle.notify_all()
+                        self._lifecycle_condition.notify_all()
 
     @asynccontextmanager
     async def _scope_operation(self, scope_id: str) -> AsyncIterator[ScopeDescriptor]:
@@ -3427,6 +3433,29 @@ class BuiltinRuntime:
         if authorizer is not None:
             service.configure_authorization(lambda ref: authorizer(scope, ref), self._review_authorization_context)
         return service
+
+    async def _mask_unavailable_topic_memory(
+        self,
+        scope_id: str,
+        result: TopicMemorySearchResult,
+    ) -> TopicMemorySearchResult:
+        """Hide Topic Memory whose registered evidence no longer supports it.
+
+        A Topic Memory that was never registered has no lifecycle row and stays visible,
+        so this only ever masks an explicit withdrawal.
+        """
+
+        repository = self.lifecycle_repository
+        if repository is None or not result.hits:
+            return result
+        async with repository.transaction() as connection:
+            hidden = await repository.unavailable_topic_artifacts(connection, scope_id)
+        if not hidden:
+            return result
+        kept = tuple(hit for hit in result.hits if hit.artifact_ref.artifact_id not in hidden)
+        if len(kept) == len(result.hits):
+            return result
+        return result.model_copy(update={"hits": kept})
 
     def _records(self) -> RecordService:
         if self._record_service is None:

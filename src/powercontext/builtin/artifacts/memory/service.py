@@ -764,6 +764,9 @@ class MemoryService:
             vector=admitted_vector if selected_mode in {"vector", "hybrid"} else (),
             limit=coarse_limit,
         )
+        # A withdrawn entry keeps its body and its projection, so the index still
+        # returns it. Drop it here, where the exact head's manifest is authoritative.
+        hits = _retain_active_entries(hits, selected)
         return await self._reranked_search_result(
             mode=selected_mode,
             query=normalized_query,
@@ -1934,6 +1937,29 @@ def _append_unique(values: list[ValueT], value: ValueT) -> None:
 
 def _equal_member(value: ValueT, values: Sequence[ValueT]) -> ValueT | None:
     return next((current for current in values if current == value), None)
+
+
+def _retain_active_entries(
+    hits: Sequence[MemoryHit],
+    memories: Sequence[Memory],
+) -> tuple[MemoryHit, ...]:
+    """Keep only hits whose entry is active in the exact searched Memory head.
+
+    Withdrawal is a manifest state, not a deletion: the projection still matches, so
+    search has to consult the head it already validated.
+    """
+
+    active = {
+        (memory.artifact_id, item.entry_id, item.entry_version_id)
+        for memory in memories
+        for item in memory.content.manifest.entries
+        if item.state == "active"
+    }
+    return tuple(
+        hit
+        for hit in hits
+        if (hit.memory_ref.artifact_id, hit.entry_id, hit.entry_version_id) in active
+    )
 
 
 def _default_id(kind: str) -> str:
