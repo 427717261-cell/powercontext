@@ -43,7 +43,12 @@ class TopicMemoryProcessingUnavailableError(PowerContextError, RuntimeError):
         super().__init__("Topic Memory processing is not configured")
 
 
+class ContextPackError(PowerContextError, ValueError):
+    """Raised when a Context Pack, a delta, or a chunk violates the wire protocol."""
+
+
 __all__ = [
+    "ContextPackError",
     "InvalidRuntimeRequestError",
     "PreparedContextInvariantError",
     "TopicMemoryProcessingUnavailableError",
