@@ -59,8 +59,8 @@
 |---|---|
 | 分支 | `2026-competition-ecosystem`（题面指定，基于上游同名分支开发） |
 | 目录 | `stepfun/`（共 36 个文件，324.7 KiB，与上游占位 `.gitkeep` 并存） |
-| 私有库 | `427717261-cell/powercontext-2026-repo`，首次入库提交 `__SHA_PRIVATE__` |
-| 公开 fork | `427717261-cell/powercontext`，首次入库提交 `__SHA_PUBLIC__` |
+| 私有库 | `427717261-cell/powercontext-2026-repo`，首次入库提交 `d203c22ba9a02589877fee3576c13088627960d4` |
+| 公开 fork | `427717261-cell/powercontext`，首次入库提交 `c58fb8b19da8517fe8673c993689e9b549f675d3` |
 
 上面记的是**内容入库那次提交**（36 个文件）。此后若对本表做过文字修订，分支顶端会多出一两个
 只改文档的提交，内容不变；查顶端用 `git log --oneline -1 -- stepfun/`。
