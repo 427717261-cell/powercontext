@@ -157,6 +157,7 @@ from powercontext.builtin.runtime.readiness import (
 )
 from powercontext.builtin.runtime.recall_sufficiency import RecallSufficiencyPolicy
 from powercontext.builtin.runtime.relational import RelationalContexts
+from powercontext.builtin.runtime.source_count_pump import SourceCountPump
 from powercontext.builtin.runtime.topic_memory_processing import (
     TopicMemoryWorkerSpec,
     run_topic_memory_worker,
@@ -166,6 +167,7 @@ from powercontext.builtin.sources import (
     BUILTIN_SOURCE_REGISTRY,
     TEXT_EVIDENCE_PROJECTION_KEY,
 )
+from powercontext.builtin.triggers import SOURCE_WINDOW_TRIGGER_NAME
 from powercontext.errors import InvalidSourceProjectionError, SourceProjectionNotFoundError
 from powercontext.sources import Source, SourceDefinitionRegistry, SourceProjectionKey
 
@@ -658,6 +660,9 @@ async def open_builtin_runtime(
         runtime.artifact_processing_supervisor = await resources.enter_async_context(
             _open_artifact_processing_supervisor(config, contexts, processing_bindings, tracing=tracing)
         )
+        await resources.enter_async_context(
+            _open_source_count_pump(config, contexts, runtime, processing_bindings)
+        )
         contexts.profiles.operation_context = runtime._operation
         if config.handoff_report.enabled:
             runtime.handoff_report = HandoffReportApplication(
@@ -853,6 +858,43 @@ async def _open_artifact_processing_supervisor(
             )
             supervisors.append(supervisor)
         yield ArtifactProcessingSupervisors(tuple(supervisors))
+
+
+@asynccontextmanager
+async def _open_source_count_pump(
+    config: BuiltinConfig,
+    contexts: RelationalContexts,
+    runtime: BuiltinRuntime,
+    bindings: Sequence[ArtifactProcessingBinding],
+) -> AsyncIterator[SourceCountPump | None]:
+    """Count unprocessed Journal entries and accept work without a timer.
+
+    Only a configured threshold on a registered binding costs anything: with
+    neither threshold set this yields ``None`` and opens no task.
+    """
+
+    registered = {binding.binding_name for binding in bindings}
+    counted = tuple(
+        (binding_name, family, threshold)
+        for family, (binding_name, threshold) in (
+            ("memory", (SOURCE_WINDOW_TRIGGER_NAME, config.runtime.memory_source_count_threshold)),
+            (
+                "topic-memory",
+                (TOPIC_MEMORY_SOURCE_WINDOW_BINDING, config.runtime.topic_memory_source_count_threshold),
+            ),
+        )
+        if threshold is not None and binding_name in registered
+    )
+    if not counted:
+        yield None
+        return
+    async with SourceCountPump(
+        contexts.database,
+        contexts.repositories.cursors,
+        bindings=counted,
+        supervisors=lambda: runtime.artifact_processing_supervisor,
+    ) as pump:
+        yield pump
 
 
 @asynccontextmanager

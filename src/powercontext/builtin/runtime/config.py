@@ -28,6 +28,7 @@ from pydantic import (
     JsonValue,
     PrivateAttr,
     SecretStr,
+    StrictInt,
     field_validator,
     model_validator,
 )
@@ -207,6 +208,8 @@ class RuntimeConfig(BaseModel):
     generation_concurrency: int = Field(default=4, ge=1, le=64)
     dream_budget: DreamBudget = Field(default_factory=DreamBudget)
     topic_memory_schedule_seconds: float | None = Field(default=None, gt=0)
+    memory_source_count_threshold: StrictInt | None = Field(default=None, gt=0)
+    topic_memory_source_count_threshold: StrictInt | None = Field(default=None, gt=0)
     topic_memory_source_window_limit: int = Field(default=10, ge=1)
     topic_memory_history_max_candidates: int = Field(default=20, ge=1, le=MAX_TOPIC_MEMORY_SEARCH_LIMIT)
     topic_memory_history_rrf_threshold: int = Field(default=70, ge=0, le=100)
