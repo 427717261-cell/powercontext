@@ -52,3 +52,18 @@
    四档同轮 + 多轮中位 + 剔除预热后，真实结果是 WebGPU 快 3.6 倍。作废数据在 `bench/archive-v1/`。
 7. **`__kbReady` 曾早于事件绑定置位**：模型加载完就置位，但 `bind()` 在其后，导致「点击无反应且无报错」。
    已改为在 `bind()` 与 `reloadCollections()` 之后置位。
+
+## D. 提交信息
+
+| 项 | 值 |
+|---|---|
+| 分支 | `2026-competition` |
+| 目录 | `stepfun/`（共 36 个文件，324.7 KiB） |
+| 私有库 | `427717261-cell/powercontext-2026-repo` → commit `c69fb0c3a4bf4527979aa6345446341e91e99b48`（父提交 `4526bf5fe0`） |
+| 公开 fork | `427717261-cell/powercontext` → commit `e406bedc1c8025c3e81706dcdf728330a01ade7f`（父提交 `f3926bc1fa`） |
+
+两库均基于各自分支当时的最新 head 打补丁（`base_tree`），未覆盖他人提交。
+逐文件校验结果：本地 36 个文件与远端 blob SHA 全等，缺失 0、哈希不符 0、远端多余 0。
+
+**未入库**：`node_modules/`、`models/`（模型由 `scripts/fetch-model.mjs` 下载）、`dist/`、`.cache/`、`.env`
+（仅提交 `.env.example` 占位模板，已确认真实密码不在其中）。
