@@ -1,0 +1,14 @@
+node_modules/
+dist/
+.env
+*.db
+__pycache__/
+
+# 本地模型（scripts/fetch-model.mjs 下载，不入库）
+models/
+
+# bench 运行时产物（保留 bench/results-*.json 作为证据）
+bench/tmp/
+
+# 浏览器 profile（复用模型缓存，不入库）
+.cache/
