@@ -59,8 +59,11 @@
 |---|---|
 | 分支 | `2026-competition` |
 | 目录 | `stepfun/`（共 36 个文件，324.7 KiB） |
-| 私有库 | `427717261-cell/powercontext-2026-repo` → commit `c69fb0c3a4bf4527979aa6345446341e91e99b48`（父提交 `4526bf5fe0`） |
-| 公开 fork | `427717261-cell/powercontext` → commit `e406bedc1c8025c3e81706dcdf728330a01ade7f`（父提交 `f3926bc1fa`） |
+| 私有库 | `427717261-cell/powercontext-2026-repo`，首次入库提交 `c69fb0c3a4bf4527979aa6345446341e91e99b48` |
+| 公开 fork | `427717261-cell/powercontext`，首次入库提交 `e406bedc1c8025c3e81706dcdf728330a01ade7f` |
+
+上面记的是**内容入库那次提交**（36 个文件）。此后若对本表做过文字修订，分支顶端会多出一两个
+只改文档的提交，内容不变；查顶端用 `git log --oneline -1 -- stepfun/`。
 
 两库均基于各自分支当时的最新 head 打补丁（`base_tree`），未覆盖他人提交。
 逐文件校验结果：本地 36 个文件与远端 blob SHA 全等，缺失 0、哈希不符 0、远端多余 0。
