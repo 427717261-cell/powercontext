@@ -1,0 +1,44 @@
+{
+  "columns": [
+    "index_name",
+    "index_type",
+    "cols"
+  ],
+  "rows": [
+    [
+      "idx_radio_archive_embedding_index_snapshot_data_table",
+      "BTREE",
+      "__key_22_1793160251406791,story_id"
+    ],
+    [
+      "ft_radio_archive",
+      "FULLTEXT",
+      "__word_segment_24_1793160250321404,__doc_id_1793160249734159"
+    ],
+    [
+      "vid_rowkey_table",
+      "BTREE",
+      "__vid_1793160251056535"
+    ],
+    [
+      "PRIMARY",
+      "BTREE",
+      "story_id"
+    ],
+    [
+      "rowkey_vid_table",
+      "BTREE",
+      "story_id"
+    ],
+    [
+      "idx_radio_archive_embedding",
+      "BTREE",
+      "__vid_1793160251056535,__type_22_1793160251332217"
+    ],
+    [
+      "idx_radio_archive_embedding_index_id_table",
+      "BTREE",
+      "__scn_22_1793160251389679,__vid_1793160251056535,__type_22_1793160251332217"
+    ]
+  ]
+}

@@ -1,0 +1,22 @@
+# seekdb 配置文件（OceanBase seekdb 轻量版）
+#
+# 与本作品验证环境里实际使用的配置逐字一致：
+#   /etc/seekdb/seekdb.cnf
+#
+# seekdb 的 systemd 启动脚本 /usr/libexec/seekdb/scripts/seekdb_systemd_start
+# 会逐行读取本文件，把 base-dir / data-dir / redo-dir / port 拼进命令行，
+# 其余键值以 --parameter key=value 的形式传给实例。
+#
+# 说明：
+#   base-dir / data-dir / redo-dir —— 永久有效；
+#   port / cpu_count             —— 只在「初始化」阶段有效，之后重启不再读取。
+#   因此换端口必须先清空数据目录重新初始化，本作品固定用默认 2881。
+
+# 这些参数永久有效
+base-dir=/var/lib/seekdb
+data-dir=/var/lib/seekdb/store
+redo-dir=/var/lib/seekdb/store/redo
+
+# 这些参数仅在初始化时有效
+port=2881
+cpu_count=4
