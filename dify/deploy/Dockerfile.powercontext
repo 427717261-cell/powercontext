@@ -1,0 +1,21 @@
+# 深夜电台 · PowerContext 服务端（听众记忆）
+#
+# 构建：docker compose build powercontext
+# 版本与赛题基线一致：powercontext 1.4.1
+FROM python:3.12-slim
+
+ARG PIP_INDEX_URL=https://pypi.org/simple
+
+RUN pip install --no-cache-dir -i "${PIP_INDEX_URL}" "powercontext[cli,server]==1.4.1"
+
+WORKDIR /app
+RUN mkdir -p /app/workspace /app/pc-home
+
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    POWERCONTEXT_SERVER_WORKSPACE=/app/workspace \
+    POWERCONTEXT_HOME=/app/pc-home
+
+EXPOSE 8100
+
+CMD ["powercontext", "server", "run", "--host", "0.0.0.0", "--port", "8100"]

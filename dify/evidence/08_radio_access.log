@@ -1,0 +1,33 @@
+[radio-archive] 监听 http://0.0.0.0:8801
+[radio-archive] seekdb=host.docker.internal:2881/radio_archive table=radio_archive embedding=on
+[radio-archive] 127.0.0.1 "GET /healthz HTTP/1.1" 200 -
+[radio-archive] 172.19.0.1 "GET /healthz HTTP/1.1" 200 -
+[radio-archive] 127.0.0.1 "GET /healthz HTTP/1.1" 200 -
+[radio-archive] 127.0.0.1 "GET /healthz HTTP/1.1" 200 -
+[radio-archive] 127.0.0.1 "GET /healthz HTTP/1.1" 200 -
+[radio-archive] 127.0.0.1 "GET /healthz HTTP/1.1" 200 -
+[radio-archive] 127.0.0.1 "GET /healthz HTTP/1.1" 200 -
+[radio-archive] 127.0.0.1 "GET /healthz HTTP/1.1" 200 -
+[radio-archive] 127.0.0.1 "GET /healthz HTTP/1.1" 200 -
+[radio-archive] 127.0.0.1 "GET /healthz HTTP/1.1" 200 -
+[radio-archive] 127.0.0.1 "GET /healthz HTTP/1.1" 200 -
+[radio-archive] 127.0.0.1 "GET /healthz HTTP/1.1" 200 -
+[radio-archive] 127.0.0.1 "GET /healthz HTTP/1.1" 200 -
+[radio-archive] 127.0.0.1 "GET /healthz HTTP/1.1" 200 -
+[radio-archive] 127.0.0.1 "GET /healthz HTTP/1.1" 200 -
+[radio-archive] 127.0.0.1 "GET /healthz HTTP/1.1" 200 -
+[radio-archive] 127.0.0.1 "GET /healthz HTTP/1.1" 200 -
+[radio-archive] 127.0.0.1 "GET /healthz HTTP/1.1" 200 -
+[radio-archive] 127.0.0.1 "GET /healthz HTTP/1.1" 200 -
+[radio-archive] 127.0.0.1 "GET /healthz HTTP/1.1" 200 -
+[radio-archive] 127.0.0.1 "GET /healthz HTTP/1.1" 200 -
+[radio-archive] 127.0.0.1 "GET /healthz HTTP/1.1" 200 -
+[radio-archive] 127.0.0.1 "GET /healthz HTTP/1.1" 200 -
+[radio-archive] 127.0.0.1 "GET /healthz HTTP/1.1" 200 -
+[radio-archive] 127.0.0.1 "GET /healthz HTTP/1.1" 200 -
+[radio-archive] 127.0.0.1 "GET /healthz HTTP/1.1" 200 -
+[radio-archive] 127.0.0.1 "GET /healthz HTTP/1.1" 200 -
+[radio-archive] 127.0.0.1 "GET /healthz HTTP/1.1" 200 -
+[radio-archive] 127.0.0.1 "GET /healthz HTTP/1.1" 200 -
+[radio-archive] 127.0.0.1 "GET /healthz HTTP/1.1" 200 -
+[radio-archive] 127.0.0.1 "GET /healthz HTTP/1.1" 200 -

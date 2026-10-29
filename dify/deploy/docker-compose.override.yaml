@@ -1,0 +1,130 @@
+# 深夜电台 · 怪谈档案 —— Dify 1.4.2 部署覆盖文件
+#
+# 本文件与 Dify 官方 docker-compose.yaml 放在同一目录，docker compose 会自动合并。
+# 用法见同目录下的 install_dify.sh（或仓库 dify/README.md 的「部署」章节）。
+#
+# 覆盖了三件事：
+#   1. Postgres 换成带 pgvector 扩展的镜像，省掉独立向量库容器；
+#   2. 追加两个配套后端服务：radio-archive（seekdb 档案检索）与 powercontext（听众记忆）；
+#   3. 给所有服务加内存上限，并直接暴露 api / web 端口，方便评审用 HTTP API 体验。
+services:
+  db:
+    image: pgvector/pgvector:pg16
+    mem_limit: 512m
+    command: >
+      postgres -c 'max_connections=50'
+               -c 'shared_buffers=96MB'
+               -c 'work_mem=2MB'
+               -c 'maintenance_work_mem=32MB'
+               -c 'effective_cache_size=512MB'
+
+  redis:
+    mem_limit: 160m
+
+  ssrf_proxy:
+    mem_limit: 96m
+
+  sandbox:
+    mem_limit: 256m
+
+  plugin_daemon:
+    mem_limit: 320m
+
+  api:
+    mem_limit: 1400m
+    ports:
+      - "${EXPOSE_API_PORT:-5001}:5001"
+
+  worker:
+    mem_limit: 900m
+    environment:
+      CELERY_WORKER_AMOUNT: 1
+      CELERY_WORKER_AUTOSCALE: false
+
+  web:
+    mem_limit: 384m
+    ports:
+      - "${EXPOSE_WEB_PORT:-3000}:3000"
+
+  nginx:
+    mem_limit: 128m
+
+  # ---------------------------------------------------------------- 配套后端
+  # 怪谈档案检索服务：seekdb 全文(NGRAM) + 向量 + 标签过滤，同一条 SQL。
+  radio-archive:
+    build:
+      context: .
+      dockerfile: Dockerfile.radio
+      args:
+        PIP_INDEX_URL: ${PIP_INDEX_URL:-https://pypi.org/simple}
+    image: midnight-radio/radio-archive:1.0
+    restart: always
+    # 只绑定本机：评审在同一台机器上 curl 127.0.0.1:8801/healthz 即可；
+    # 需要从别的机器访问时把 127.0.0.1 改成 0.0.0.0。
+    ports:
+      - "${EXPOSE_RADIO_BIND:-127.0.0.1}:${EXPOSE_RADIO_PORT:-8801}:8801"
+    environment:
+      RADIO_SEEKDB_HOST: ${RADIO_SEEKDB_HOST:-host.docker.internal}
+      RADIO_SEEKDB_PORT: ${RADIO_SEEKDB_PORT:-2881}
+      RADIO_SEEKDB_USER: ${RADIO_SEEKDB_USER:-radio}
+      RADIO_SEEKDB_PASSWORD: ${RADIO_SEEKDB_PASSWORD:-}
+      RADIO_SEEKDB_DATABASE: ${RADIO_SEEKDB_DATABASE:-radio_archive}
+      RADIO_ARCHIVE_TABLE: ${RADIO_ARCHIVE_TABLE:-radio_archive}
+      RADIO_EMBEDDING_API_BASE: ${RADIO_EMBEDDING_API_BASE:-https://api.minimaxi.com/v1}
+      RADIO_EMBEDDING_API_KEY: ${RADIO_EMBEDDING_API_KEY:-}
+      RADIO_EMBEDDING_MODEL: ${RADIO_EMBEDDING_MODEL:-embo-01}
+      RADIO_HTTP_HOST: 0.0.0.0
+      RADIO_HTTP_PORT: "8801"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - default
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request;urllib.request.urlopen('http://127.0.0.1:8801/healthz',timeout=5)"
+      interval: 15s
+      timeout: 8s
+      retries: 10
+      start_period: 20s
+
+  # PowerContext 服务端：跨会话听众记忆。
+  # 存储后端用官方支持的 SQLite（文件落在 ./volumes/powercontext）。
+  # 注意：PowerContext 的 oceanbase 后端要求完整 OceanBase 的租户视图
+  #（oceanbase.GV$OB_PARAMETERS / DBA_OB_TENANTS），seekdb 轻量版不提供这些视图，
+  # 因此不能直接对接 seekdb 实例；需要接 OceanBase 时按 PowerContext 文档改 DATABASE_KIND/URL。
+  powercontext:
+    build:
+      context: .
+      dockerfile: Dockerfile.powercontext
+      args:
+        PIP_INDEX_URL: ${PIP_INDEX_URL:-https://pypi.org/simple}
+    image: midnight-radio/powercontext:1.0
+    restart: always
+    # PowerContext 的记忆接口默认无鉴权，这里只绑定本机，避免直接暴露到公网；
+    # 需要从别的机器访问时把 127.0.0.1 改成 0.0.0.0 并自行打开鉴权。
+    ports:
+      - "${EXPOSE_POWERCONTEXT_BIND:-127.0.0.1}:${EXPOSE_POWERCONTEXT_PORT:-8100}:8100"
+    environment:
+      POWERCONTEXT_SERVER_HTTP_HOST: 0.0.0.0
+      POWERCONTEXT_SERVER_HTTP_PORT: "8100"
+      POWERCONTEXT_SERVER_DATABASE_KIND: sqlite
+      POWERCONTEXT_SERVER_ALLOW_UNAUTHENTICATED_NON_LOOPBACK: "true"
+      POWERCONTEXT_SERVER_ACCESS_MODE: disabled
+      POWERCONTEXT_HOME: /app/pc-home
+    volumes:
+      - ./volumes/powercontext:/app/pc-home
+    networks:
+      - default
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request;urllib.request.urlopen('http://127.0.0.1:8100/health/ready',timeout=5)"
+      interval: 15s
+      timeout: 8s
+      retries: 20
+      start_period: 40s

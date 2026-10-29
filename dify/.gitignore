@@ -1,0 +1,10 @@
+# Python 缓存
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# 本地凭据（真实 Key / 口令绝不入库）
+.env
+*.env.local
+credentials*.json

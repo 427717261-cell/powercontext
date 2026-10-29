@@ -1,0 +1,21 @@
+# 深夜电台 · 档案检索后端（seekdb 全文 + 向量）
+#
+# 构建：docker compose build radio-archive
+# PIP_INDEX_URL 可通过 --build-arg 或 compose 的 build.args 覆盖（国内机器建议指向镜像站）。
+FROM python:3.12-slim
+
+ARG PIP_INDEX_URL=https://pypi.org/simple
+
+RUN pip install --no-cache-dir -i "${PIP_INDEX_URL}" "pymysql>=1.2"
+
+WORKDIR /app
+COPY service/ /app/service/
+COPY scripts/ /app/scripts/
+COPY data/ /app/data/
+
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1
+
+EXPOSE 8801
+
+CMD ["python", "/app/service/radio_archive.py"]

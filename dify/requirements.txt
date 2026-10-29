@@ -1,0 +1,14 @@
+# 深夜电台 · 怪谈档案 —— 配套后端依赖
+#
+# 说明：
+#   * 本文件只列出「脱离 Docker、直接在宿主机跑配套后端」时需要的包。
+#   * 用 docker compose 部署时，依赖由 deploy/Dockerfile.radio 与
+#     deploy/Dockerfile.powercontext 在构建时安装，无需手工 pip install。
+#   * PowerContext 服务端在 Dockerfile.powercontext 里安装
+#     powercontext[cli,server]==1.4.1（与赛题基线版本一致）。
+
+# 电台检索后端：连接 seekdb（MySQL 协议）
+pymysql>=1.2,<1.2.1
+
+# PowerContext 服务端：HTTP Server + CLI
+powercontext[cli,server]==1.4.1

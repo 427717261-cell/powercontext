@@ -1,0 +1,740 @@
+app:
+  description: 深夜电台 · 怪谈档案 —— Dify 编排 + seekdb 怪谈档案检索 + PowerContext 听众记忆
+  icon: "🌃"
+  icon_background: "#0B1120"
+  mode: advanced-chat
+  name: 深夜电台 · 怪谈档案
+  use_icon_as_answer_icon: false
+dependencies: []
+kind: app
+version: 0.3.0
+workflow:
+  conversation_variables: []
+  environment_variables:
+  - description: PowerContext 服务地址（不含末尾斜杠）
+    id: POWERCONTEXT_BASE_URL
+    name: POWERCONTEXT_BASE_URL
+    selector:
+    - env
+    - POWERCONTEXT_BASE_URL
+    value: http://powercontext:8100
+    value_type: string
+  - description: PowerContext 访问令牌（留空表示不需要鉴权）
+    id: POWERCONTEXT_TOKEN
+    name: POWERCONTEXT_TOKEN
+    selector:
+    - env
+    - POWERCONTEXT_TOKEN
+    value: ''
+    value_type: string
+  - description: 电台后端地址（seekdb 档案检索服务）
+    id: RADIO_API_BASE
+    name: RADIO_API_BASE
+    selector:
+    - env
+    - RADIO_API_BASE
+    value: http://radio-archive:8801
+    value_type: string
+  features:
+    file_upload:
+      allowed_file_extensions: []
+      allowed_file_types: []
+      allowed_file_upload_methods: []
+      enabled: false
+      fileUploadConfig: {}
+      image:
+        enabled: false
+        number_limits: 3
+        transfer_methods:
+        - local_file
+        - remote_url
+      number_limits: 3
+    opening_statement: |-
+      🌃 深夜电台《怪谈档案》已经开播。
+
+      先在左边填一个**听众代号**（几个字都行），今晚想听点什么都可以说：
+      想听个地铁末班车的怪谈 / 讲讲便利店的事 / 我今天特别累 /
+      或者随便接个梗。我会从档案库里翻素材，也会记得你上次说过什么。
+    retriever_resource:
+      enabled: true
+    sensitive_word_avoidance:
+      enabled: false
+    speech_to_text:
+      enabled: false
+    suggested_questions:
+    - 想听末班地铁的怪谈
+    - 讲讲凌晨三点的便利店
+    - 我今天特别累
+    suggested_questions_after_answer:
+      enabled: false
+    text_to_speech:
+      enabled: false
+      language: ''
+      voice: ''
+  graph:
+    edges:
+    - id: e1
+      source: start
+      sourceHandle: source
+      target: code_req
+      targetHandle: target
+      type: custom
+      data:
+        isInIteration: false
+        sourceType: start
+        targetType: code
+        selected: false
+    - id: e2
+      source: code_req
+      sourceHandle: source
+      target: http_scope
+      targetHandle: target
+      type: custom
+      data:
+        isInIteration: false
+        sourceType: code
+        targetType: http-request
+        selected: false
+    - id: e3
+      source: http_scope
+      sourceHandle: source
+      target: code_scope
+      targetHandle: target
+      type: custom
+      data:
+        isInIteration: false
+        sourceType: http-request
+        targetType: code
+        selected: false
+    - id: e4
+      source: code_scope
+      sourceHandle: source
+      target: http_recall
+      targetHandle: target
+      type: custom
+      data:
+        isInIteration: false
+        sourceType: code
+        targetType: http-request
+        selected: false
+    - id: e5
+      source: http_recall
+      sourceHandle: source
+      target: code_memory
+      targetHandle: target
+      type: custom
+      data:
+        isInIteration: false
+        sourceType: http-request
+        targetType: code
+        selected: false
+    - id: e6
+      source: code_memory
+      sourceHandle: source
+      target: http_archive
+      targetHandle: target
+      type: custom
+      data:
+        isInIteration: false
+        sourceType: code
+        targetType: http-request
+        selected: false
+    - id: e7
+      source: http_archive
+      sourceHandle: source
+      target: code_save
+      targetHandle: target
+      type: custom
+      data:
+        isInIteration: false
+        sourceType: http-request
+        targetType: code
+        selected: false
+    - id: e8
+      source: code_save
+      sourceHandle: source
+      target: http_save
+      targetHandle: target
+      type: custom
+      data:
+        isInIteration: false
+        sourceType: code
+        targetType: http-request
+        selected: false
+    - id: e9
+      source: http_save
+      sourceHandle: source
+      target: llm_host
+      targetHandle: target
+      type: custom
+      data:
+        isInIteration: false
+        sourceType: http-request
+        targetType: llm
+        selected: false
+    - id: e10
+      source: llm_host
+      sourceHandle: source
+      target: answer
+      targetHandle: target
+      type: custom
+      data:
+        isInIteration: false
+        sourceType: llm
+        targetType: answer
+        selected: false
+    nodes:
+    - id: start
+      type: start
+      position: {x: 30, y: 300}
+      positionAbsolute: {x: 30, y: 300}
+      width: 244
+      height: 116
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      data:
+        title: 开始
+        type: start
+        desc: 听众进入深夜电台
+        variables:
+        - variable: listener_id
+          label: 听众代号
+          type: text-input
+          required: false
+          max_length: 24
+          options: []
+          description: 几字皆可，主播会在后续节目里一直这么叫你；留空则按「无名听众」处理
+        selected: false
+    - id: code_req
+      type: code
+      position: {x: 330, y: 300}
+      positionAbsolute: {x: 330, y: 300}
+      width: 244
+      height: 54
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      data:
+        title: 组装请求体
+        type: code
+        desc: 用 json.dumps 生成请求体，听众输入里的引号不会弄坏 JSON
+        code_language: python3
+        code: |-
+          def main(listener_id: str, message: str) -> dict:
+              """生成下游两个请求体。
+
+              听众输入是自由文本，可能带引号、换行；直接拼进 JSON 字面量会解析失败，
+              所以这里统一用 json.dumps 生成合法 JSON。
+              """
+              import json
+
+              listener = (listener_id or "").strip() or "无名听众"
+              text = (message or "").strip()
+
+              scope_body = json.dumps(
+                  {
+                      "title": f"深夜电台听众 {listener}",
+                      "summary": "《怪谈档案》直播间的听众档案，保存这位听众的偏好、点播与梗。",
+                      "idempotency_key": f"midnight-radio-{listener}",
+                  },
+                  ensure_ascii=False,
+              )
+              archive_body = json.dumps(
+                  {"query": text, "top_k": 2, "listener": listener},
+                  ensure_ascii=False,
+              )
+              return {"scope_body": scope_body, "archive_body": archive_body}
+        variables:
+        - variable: listener_id
+          value_selector:
+          - start
+          - listener_id
+        - variable: message
+          value_selector:
+          - sys
+          - query
+        outputs:
+          scope_body:
+            type: string
+            children: null
+          archive_body:
+            type: string
+            children: null
+        error_strategy: default-value
+        default_value:
+        - id: scope_body
+          key: scope_body
+          type: string
+          value: '{"title": "深夜电台听众", "summary": "听众档案", "idempotency_key": "midnight-radio"}'
+        - id: archive_body
+          key: archive_body
+          type: string
+          value: '{"query": "怪谈", "top_k": 2, "listener": ""}'
+        version: '1'
+        retry_config:
+          max_retries: 0
+          retry_enabled: false
+          retry_interval: 1000
+        selected: false
+    - id: http_scope
+      type: http-request
+      position: {x: 630, y: 300}
+      positionAbsolute: {x: 630, y: 300}
+      width: 244
+      height: 118
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      data:
+        title: 建立听众档案（PowerContext）
+        type: http-request
+        desc: 为该听众幂等建立 PowerContext Scope
+        method: post
+        url: "{{#env.POWERCONTEXT_BASE_URL#}}/v1/scopes"
+        authorization:
+          type: no-auth
+          config: null
+        headers: "Content-Type: application/json\nAuthorization: Bearer {{#env.POWERCONTEXT_TOKEN#}}"
+        params: ''
+        body:
+          type: json
+          data:
+          - id: body-scope
+            key: ''
+            type: text
+            value: '{{#code_req.scope_body#}}'
+        timeout:
+          connect: 10
+          read: 60
+          write: 30
+        ssl_verify: true
+        error_strategy: default-value
+        default_value:
+        - id: body
+          key: body
+          type: string
+          value: '{"scope_id": ""}'
+        version: '1'
+        retry_config:
+          max_retries: 1
+          retry_enabled: false
+          retry_interval: 1000
+        selected: false
+    - id: code_scope
+      type: code
+      position: {x: 930, y: 300}
+      positionAbsolute: {x: 930, y: 300}
+      width: 244
+      height: 54
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      data:
+        title: 解析 scope_id
+        type: code
+        desc: 从 PowerContext 返回体里取出 scope_id，并生成记忆召回请求体
+        code_language: python3
+        code: |-
+          def main(body: str) -> dict:
+              """取出 scope_id 并生成记忆召回请求体。"""
+              import json
+
+              try:
+                  data = json.loads(body or "{}")
+              except Exception:
+                  data = {}
+              scope_id = str(data.get("scope_id") or "")
+              recall_body = json.dumps(
+                  {
+                      "scope_id": scope_id,
+                      "query": "这位听众在深夜电台说过的话、点播过的怪谈、玩过的梗和当时的心情",
+                      "max_bytes": 2000,
+                  },
+                  ensure_ascii=False,
+              )
+              return {"scope_id": scope_id, "recall_body": recall_body}
+        variables:
+        - variable: body
+          value_selector:
+          - http_scope
+          - body
+        outputs:
+          scope_id:
+            type: string
+            children: null
+          recall_body:
+            type: string
+            children: null
+        error_strategy: default-value
+        default_value:
+        - id: scope_id
+          key: scope_id
+          type: string
+          value: ''
+        - id: recall_body
+          key: recall_body
+          type: string
+          value: '{"scope_id": "", "query": "听众记忆", "max_bytes": 2000}'
+        version: '1'
+        retry_config:
+          max_retries: 0
+          retry_enabled: false
+          retry_interval: 1000
+        selected: false
+    - id: http_recall
+      type: http-request
+      position: {x: 1230, y: 300}
+      positionAbsolute: {x: 1230, y: 300}
+      width: 244
+      height: 118
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      data:
+        title: 召回听众记忆（PowerContext）
+        type: http-request
+        desc: 跨会话复用该听众此前的偏好、点播与梗
+        method: post
+        url: "{{#env.POWERCONTEXT_BASE_URL#}}/v1/context/prepare"
+        authorization:
+          type: no-auth
+          config: null
+        headers: "Content-Type: application/json\nAuthorization: Bearer {{#env.POWERCONTEXT_TOKEN#}}"
+        params: ''
+        body:
+          type: json
+          data:
+          - id: body-recall
+            key: ''
+            type: text
+            value: '{{#code_scope.recall_body#}}'
+        timeout:
+          connect: 10
+          read: 60
+          write: 30
+        ssl_verify: true
+        error_strategy: default-value
+        default_value:
+        - id: body
+          key: body
+          type: string
+          value: '{"status": "unavailable", "content": ""}'
+        version: '1'
+        retry_config:
+          max_retries: 1
+          retry_enabled: false
+          retry_interval: 1000
+        selected: false
+    - id: code_memory
+      type: code
+      position: {x: 1530, y: 300}
+      positionAbsolute: {x: 1530, y: 300}
+      width: 244
+      height: 54
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      data:
+        title: 整理记忆文本
+        type: code
+        desc: 把记忆召回结果压成一段可读的文本
+        code_language: python3
+        code: |-
+          def main(body: str) -> dict:
+              """把 PowerContext 的记忆召回结果整理成一段紧凑的中文文本。
+
+              prepare_context 返回的 content 里带有一段安全提示模板，
+              这里只取出真正的记忆条目，避免把模板话术喂给主播。
+              """
+              import json
+
+              try:
+                  data = json.loads(body or "{}")
+              except Exception:
+                  data = {}
+              content = str(data.get("content") or "").strip()
+              if not content:
+                  return {"memory_text": "（档案里还没有这位听众的记录——他是第一次来。）"}
+
+              begin = "BEGIN_POWERCONTEXT_PREPARED_CONTEXT_V1"
+              end = "END_POWERCONTEXT_PREPARED_CONTEXT_V1"
+              items = []
+              if begin in content and end in content:
+                  raw = content.split(begin, 1)[1].split(end, 1)[0].strip()
+                  try:
+                      payload = json.loads(raw)
+                      for item in payload.get("items", []):
+                          text = str(item.get("content") or "").strip()
+                          if text:
+                              items.append(text)
+                  except Exception:
+                      items = []
+              if not items:
+                  items = [line.strip() for line in content.splitlines() if line.strip()][:5]
+              memory_text = "；".join(items) if items else "（档案里还没有这位听众的记录——他是第一次来。）"
+              return {"memory_text": memory_text}
+        variables:
+        - variable: body
+          value_selector:
+          - http_recall
+          - body
+        outputs:
+          memory_text:
+            type: string
+            children: null
+        error_strategy: default-value
+        default_value:
+        - id: memory_text
+          key: memory_text
+          type: string
+          value: '（记忆接口暂时没有回应，本轮按新听众处理。）'
+        version: '1'
+        retry_config:
+          max_retries: 0
+          retry_enabled: false
+          retry_interval: 1000
+        selected: false
+    - id: http_archive
+      type: http-request
+      position: {x: 1830, y: 300}
+      positionAbsolute: {x: 1830, y: 300}
+      width: 244
+      height: 118
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      data:
+        title: 检索怪谈档案（seekdb）
+        type: http-request
+        desc: 全文 + 向量 + 标签过滤，同一条 seekdb 语句
+        method: post
+        url: "{{#env.RADIO_API_BASE#}}/archive/search?format=text"
+        authorization:
+          type: no-auth
+          config: null
+        headers: "Content-Type: application/json"
+        params: ''
+        body:
+          type: json
+          data:
+          - id: body-archive
+            key: ''
+            type: text
+            value: '{{#code_req.archive_body#}}'
+        timeout:
+          connect: 10
+          read: 60
+          write: 30
+        ssl_verify: true
+        error_strategy: default-value
+        default_value:
+        - id: body
+          key: body
+          type: string
+          value: '（档案库暂时没有回应，主播需要即兴发挥。）'
+        version: '1'
+        retry_config:
+          max_retries: 1
+          retry_enabled: false
+          retry_interval: 1000
+        selected: false
+    - id: code_save
+      type: code
+      position: {x: 2130, y: 300}
+      positionAbsolute: {x: 2130, y: 300}
+      width: 244
+      height: 54
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      data:
+        title: 整理本轮素材
+        type: code
+        desc: 把这一轮听众说的话与用到的素材拼成合法 JSON，并抽出卷宗卡片
+        code_language: python3
+        code: |-
+          def main(scope_id: str, message: str, archive_text: str) -> dict:
+              """生成写回记忆的请求体，并抽出简短的卷宗卡片。"""
+              import json
+
+              text = (message or "").strip()
+              material = (archive_text or "").strip()[:600]
+              save_body = json.dumps(
+                  {
+                      "scope_id": scope_id or "",
+                      "kind": "fact",
+                      "text": f"听众在深夜电台说：{text}。本轮主播用到的档案素材：{material}",
+                      "reason": "深夜电台的一轮互动",
+                  },
+                  ensure_ascii=False,
+              )
+              cards = []
+              for line in (archive_text or "").splitlines():
+                  line = line.strip()
+                  if line.startswith("《"):
+                      cards.append(line.split("〕")[0] + "〕")
+              archive_cards = " / ".join(cards) if cards else "（这一轮没有翻出卷宗）"
+              return {"save_body": save_body, "archive_cards": archive_cards}
+        variables:
+        - variable: scope_id
+          value_selector:
+          - code_scope
+          - scope_id
+        - variable: message
+          value_selector:
+          - sys
+          - query
+        - variable: archive_text
+          value_selector:
+          - http_archive
+          - body
+        outputs:
+          save_body:
+            type: string
+            children: null
+          archive_cards:
+            type: string
+            children: null
+        error_strategy: default-value
+        default_value:
+        - id: save_body
+          key: save_body
+          type: string
+          value: '{"scope_id": "", "kind": "fact", "text": "", "reason": "深夜电台的一轮互动"}'
+        - id: archive_cards
+          key: archive_cards
+          type: string
+          value: '（这一轮没有翻出卷宗）'
+        version: '1'
+        retry_config:
+          max_retries: 0
+          retry_enabled: false
+          retry_interval: 1000
+        selected: false
+    - id: http_save
+      type: http-request
+      position: {x: 2430, y: 300}
+      positionAbsolute: {x: 2430, y: 300}
+      width: 244
+      height: 118
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      data:
+        title: 记住这一轮（PowerContext）
+        type: http-request
+        desc: 把听众这轮说的话与素材写回记忆，供下次复用
+        method: post
+        url: "{{#env.POWERCONTEXT_BASE_URL#}}/v1/memory/remember"
+        authorization:
+          type: no-auth
+          config: null
+        headers: "Content-Type: application/json\nAuthorization: Bearer {{#env.POWERCONTEXT_TOKEN#}}"
+        params: ''
+        body:
+          type: json
+          data:
+          - id: body-save
+            key: ''
+            type: text
+            value: '{{#code_save.save_body#}}'
+        timeout:
+          connect: 10
+          read: 60
+          write: 30
+        ssl_verify: true
+        error_strategy: default-value
+        default_value:
+        - id: body
+          key: body
+          type: string
+          value: '{"status": "unavailable"}'
+        version: '1'
+        retry_config:
+          max_retries: 1
+          retry_enabled: false
+          retry_interval: 1000
+        selected: false
+    - id: llm_host
+      type: llm
+      position: {x: 2730, y: 300}
+      positionAbsolute: {x: 2730, y: 300}
+      width: 244
+      height: 98
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      data:
+        title: 夜班主播 · 阿雾
+        type: llm
+        desc: 结合档案素材与听众记忆生成口播
+        model:
+          provider: langgenius/openai_api_compatible/openai_api_compatible
+          name: MiniMax-M3
+          mode: chat
+          completion_params:
+            temperature: 0.9
+            max_tokens: 1024
+        prompt_template:
+        - role: system
+          text: |-
+            你是深夜电台《怪谈档案》的夜班主播「阿雾」，声音低沉、语速偏慢，习惯在句子前加一个短促的气口提示（像「嘶——」「嗯哼，」「咔哒。」）。
+
+            你在直播都市怪谈：每晚讲一段档案馆里的旧怪谈，讲到关键处会停顿，会替听众复述他们自己说过的话。
+
+            规矩：
+            1. 只使用「档案素材」里的怪谈事实，不要编造素材里没有的设定；素材不够时可以即兴发挥，但必须说明这是即兴发挥。
+            2. 「听众记忆」里出现过的内容，要明确回应——这是听众第二次来了，你认得他/她。
+            3. 听众如果说了「我今天特别累」这类情绪，要先接住情绪，再讲稿子。
+            4. 结尾抛一个能让听众接话的问题，并给出一个可选项（例如「想听 A 还是 B？」）。
+            5. 全程中文，控制在 300 字以内，口播稿体，不要写小标题、不要写 markdown 列表。
+            6. 不要提及「检索」「向量」「数据库」「接口」等实现细节，只说「档案馆」「卷宗」「今晚翻出来的」。
+        - role: user
+          text: |-
+            【听众代号】{{#start.listener_id#}}
+            【听众这轮说的话】{{#sys.query#}}
+
+            【档案素材】
+            {{#http_archive.body#}}
+
+            【听众记忆】
+            {{#code_memory.memory_text#}}
+        prompt_config:
+          jinja2_variables: []
+        context:
+          enabled: false
+          variable_selector: []
+        vision:
+          enabled: false
+        structured_output_enabled: false
+        version: '1'
+        retry_config:
+          max_retries: 1
+          retry_enabled: false
+          retry_interval: 1000
+        selected: false
+    - id: answer
+      type: answer
+      position: {x: 3030, y: 300}
+      positionAbsolute: {x: 3030, y: 300}
+      width: 244
+      height: 100
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      data:
+        title: 播出
+        type: answer
+        desc: 把主播口播交给听众
+        answer: |-
+          {{#llm_host.text#}}
+
+          ---
+          📻 今晚翻出的卷宗：{{#code_save.archive_cards#}}
+        version: '1'
+        retry_config:
+          max_retries: 0
+          retry_enabled: false
+          retry_interval: 1000
+        selected: false
