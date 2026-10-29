@@ -9,27 +9,50 @@
 
 ## 一、提交信息（填测评平台用）
 
+本作品的**同一份内容**放在 4 个地方（`dify/` 目录逐字节一致，已校验）：
+
+| 仓库 | 可见性 | 分支 | 说明 |
+| --- | --- | --- | --- |
+| `427717261-cell/powercontext` | **公开**（官方公开 Fork） | `2026-competition-ecosystem` / `2026-competition` | 平台**无需任何令牌**就能 clone |
+| `427717261-cell/powercontext-2026-repo` | 私有（私有导入仓库） | `2026-competition-ecosystem` / `2026-competition` | 需要平台被授予读取权限 |
+
+### 方案 A（推荐）：提交公开 Fork
+
 | 项 | 值 |
 | --- | --- |
-| 仓库 | `https://github.com/427717261-cell/powercontext-2026-repo` |
+| 仓库地址 | `https://github.com/427717261-cell/powercontext` |
 | 分支 | `2026-competition-ecosystem` |
-| 作品目录 | **`dify/`**（本文件与全部交付物都在这个目录下） |
-| 提交 commit | 见本文件末尾的「本次提交」 |
+| 提交 commit | **取该分支的 tip**（见下方自检命令） |
+| 作品目录 | **`dify/`** |
+| 访问令牌 | **留空**（仓库公开，匿名可 clone） |
 
-> **不要把令牌写进仓库 URL。** 仓库是私有的，按赛事约定方式授予平台读取权限即可
-> （平台表单的访问令牌字段），不要把 PAT 拼在 `https://user:token@github.com/...` 里。
-> 另外，本作品也放在**默认分支 `2026-competition` 的 `dify/` 目录**下，
-> 两个分支的 `dify/` 内容完全一致，任取其一都能复现。
+> 该仓库是 `oceanbase/powercontext` 的公开 Fork，官方说明里明确写着
+> 「私有仓库须授予平台读取权限；**已有公开 Fork 也可使用**」。
+> 它的默认分支已指向 `2026-competition`（同样含完整 `dify/`），
+> 所以平台无论按分支取还是按默认分支取，都能拿到本作品。
+
+### 方案 B：提交私有导入仓库
+
+| 项 | 值 |
+| --- | --- |
+| 仓库地址 | `https://github.com/427717261-cell/powercontext-2026-repo` |
+| 分支 | `2026-competition-ecosystem` |
+| 提交 commit | **取该分支的 tip**（见下方自检命令） |
+| 作品目录 | **`dify/`** |
+| 访问令牌 | 填一个对该仓库有 **read** 权限的 PAT（仓库是私有的，令牌字段填这里） |
+
+> 仓库地址里**不要拼令牌**（`https://<token>@github.com/...`）——
+> 平台表单有独立的令牌字段，拼在 URL 里反而可能让地址解析失败。
 
 ### 平台拉取自检（提交前先跑一遍）
 
 在**和评测平台同一台机器**上执行，用来确认平台确实能拉到这份代码：
 
 ```bash
-# 不带令牌（公开可达时）
-git ls-remote https://github.com/427717261-cell/powercontext-2026-repo refs/heads/2026-competition-ecosystem
+# 方案 A：公开 Fork，不带令牌
+git ls-remote https://github.com/427717261-cell/powercontext refs/heads/2026-competition-ecosystem
 
-# 带令牌（私有仓库时，token 从环境变量读，别写进命令行历史）
+# 方案 B：私有仓库，带令牌（token 从环境变量读，别写进命令行历史）
 GIT_TERMINAL_PROMPT=0 git -c "http.extraheader=Authorization: Bearer $GITHUB_TOKEN" \
   ls-remote https://github.com/427717261-cell/powercontext-2026-repo refs/heads/2026-competition-ecosystem
 ```
@@ -37,6 +60,10 @@ GIT_TERMINAL_PROMPT=0 git -c "http.extraheader=Authorization: Bearer $GITHUB_TOK
 两条命令都能输出 `refs/heads/2026-competition-ecosystem  <commit sha>` 才算通过；
 只输出 sha 不带 `refs/heads/` 说明分支名填错了。**再确认 sha 与提交表单里填的一致**，
 平台是按这个 sha 检出的。
+
+> 私有仓库的令牌必须对 `powercontext-2026-repo` 有读权限；
+> 如果平台上填的令牌是之前用过的那一个、后来被吊销了，
+> clone 就会失败——这正是「执行失败但没有原因」最常见的情形。
 
 ## 二、交付物清单（全部在 `dify/` 下）
 
@@ -122,8 +149,15 @@ docker compose up -d
 
 | 项 | 值 |
 | --- | --- |
-| 分支 | `2026-competition-ecosystem` |
-| commit | **取该分支的 tip**（`git ls-remote https://github.com/427717261-cell/powercontext-2026-repo refs/heads/2026-competition-ecosystem` 可查）。本文件随每次提交同步更新，不写死具体 SHA，避免过期 |
-| 同一份内容 | 也已同步到默认分支 `2026-competition` 的 `dify/` 目录（内容完全一致） |
+| 作品目录 | `dify/`（私有仓库与公开 Fork 的两个分支里内容完全一致，逐字节校验过） |
+| 分支 | `2026-competition-ecosystem`（默认分支 `2026-competition` 里也有同一份） |
+| commit | **取该分支的 tip**，不要写死某个 SHA（每次提交都会变，写死会过期） |
+
+```bash
+# 公开 Fork（方案 A）
+git ls-remote https://github.com/427717261-cell/powercontext refs/heads/2026-competition-ecosystem
+# 私有仓库（方案 B）
+git ls-remote https://github.com/427717261-cell/powercontext-2026-repo refs/heads/2026-competition-ecosystem
+```
 
 > 完整提交历史见仓库的 `dify/` 目录提交记录。
