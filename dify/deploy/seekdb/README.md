@@ -32,7 +32,8 @@ MySQL 协议兼容层报的是 `5.7.25-OceanBase seekdb-v1.4.0.0`，这是 seekd
 
 ### 3.1 安装方式
 
-官方 yum / apt 仓库安装（**不是 Docker 镜像**，seekdb 官方未提供容器镜像）：
+官方安装脚本走 **yum / apt 仓库**，装的是 rpm / deb 包 + 一份 systemd 单元，
+**不是容器**（本作品也没有用任何 seekdb 容器镜像）：
 
 ```bash
 curl -fsSL -o /tmp/seekdb_install.sh \
@@ -41,7 +42,7 @@ sudo bash /tmp/seekdb_install.sh
 ```
 
 该脚本会配置 OceanBase 仓库并安装 `seekdb` 包，同时落下一份 systemd 单元
-`/usr/lib/systemd/system/seekdb.service`。
+`/usr/lib/systemd/system/seekdb.service`（`ExecStart=/usr/libexec/seekdb/scripts/seekdb_systemd_start`）。
 
 > 本目录的 `install_seekdb.sh` 把上面这套流程连同配置写入、启动、等就绪打包成一个脚本，
 > 评审可以直接跑 `bash install_seekdb.sh`。

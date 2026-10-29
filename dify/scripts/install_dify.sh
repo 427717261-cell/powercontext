@@ -43,6 +43,13 @@ cat <<'EOF'
 
 ==> 接下来请执行：
 
+  # 0) 先部署 seekdb（怪谈档案库的承载数据库，跑在宿主机上）
+  #    版本 OceanBase seekdb 1.4.0.0；安装+写配置+启动一条脚本搞定
+  sudo bash <repo>/dify/deploy/seekdb/install_seekdb.sh
+  #    再建库 + 建最小权限账号（先把 init_account.sql 里的 <radio_口令> 换成自己的值）
+  mysql -h 127.0.0.1 -P 2881 -u root -p < <repo>/dify/deploy/seekdb/init_account.sql
+  #    细节见 <repo>/dify/deploy/seekdb/README.md
+
   # 1) 补齐凭据（不要把真实 Key 提交进仓库）
   #    在 ${TARGET_DIR}/.env 末尾追加下面这些变量：
   #      RADIO_SEEKDB_HOST=host.docker.internal     # seekdb 跑在宿主机时用这个

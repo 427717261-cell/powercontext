@@ -35,7 +35,7 @@
 | 组件 | 版本 | 在本作品里承担什么 |
 | --- | --- | --- |
 | **Dify** | 1.4.2（`langgenius/dify-api:1.4.2` / `dify-web:1.4.2` / `dify-sandbox:0.2.12` / `dify-plugin-daemon:0.1.2-local`） | 核心流程编排：输入处理 → HTTP 调用 → 代码节点 → LLM 主播 → 输出；模型调用、对话界面、工作流执行记录 |
-| **seekdb**（OceanBase 轻量版） | 5.7.25-OceanBase seekdb-v1.4.0.0 | **怪谈档案库**：20 条怪谈档案，承载 `VECTOR` 列 + NGRAM 全文索引 + HNSW 向量索引；电台后端用**同一条 SQL**同时走全文与向量两条通道并做标签过滤 |
+| **seekdb**（OceanBase 轻量版） | **1.4.0.0**（rpm 包 `seekdb-1.4.0-100000172026082615.el7.x86_64`；MySQL 协议版本串 `5.7.25-OceanBase seekdb-v1.4.0.0`） | **怪谈档案库**：20 条怪谈档案，承载 `VECTOR` 列 + NGRAM 全文索引 + HNSW 向量索引；电台后端用**同一条 SQL**同时走全文与向量两条通道并做标签过滤。部署配置见 [`deploy/seekdb/README.md`](./deploy/seekdb/README.md) |
 | **PowerContext** | 1.4.1（PyPI `powercontext[cli,server]`） | **听众记忆**：Scope 幂等建立、跨会话召回（`/v1/context/prepare`）、本轮记忆写回（`/v1/memory/remember`） |
 | MiniMax-M3 | 通过 Dify 的 `langgenius/openai_api_compatible` 插件接入 | 主播话术生成（LLM） |
 | embo-01 | MiniMax Embedding | 档案入库与检索时的向量（维度 1536） |
